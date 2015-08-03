@@ -53,8 +53,8 @@ module Kiev
     end
 
     def logger_instance
-      Logger.new(log_storage, "daily").tap do |logger|
-        logger.level = Logger.const_get((log_level).to_s.upcase)
+      ::Logger.new(log_storage, "daily").tap do |logger|
+        logger.level = ::Logger.const_get((log_level).to_s.upcase)
         logger.datetime_format = "%Y-%m-%d %H:%M:%S"
         logger.formatter = Formatters::Default.new
       end
