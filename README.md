@@ -25,8 +25,6 @@ Register the Kiev::Logger in your app and you can make your requests loggable:
 require "kiev"
 
 class MySweetSugarCandyApp < Sinatra::Base
-  register Kiev::Logger
-  
   # Enable logging
 
   enable :logging
@@ -42,6 +40,8 @@ class MySweetSugarCandyApp < Sinatra::Base
   configure :test do
     disable :logging
   end
+
+  register Kiev::Logger
 end
 ```
 
