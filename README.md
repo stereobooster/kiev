@@ -1,5 +1,5 @@
 # kiev
-A logging extension for Sinatra
+A logging extension for Sinatra integrated with logstash
 
 ## Installation
 
@@ -42,8 +42,45 @@ class MySweetSugarCandyApp < Sinatra::Base
   end
 
   register Kiev::Logger
+
+  # Add logstash logger
+  add_logstash_logger sync: true, uri: "tcp://localhost:5228"
 end
 ```
+
+If you want to have additional methods in your logger, first you have to subclass `Kiev::MultisourceLogger`
+
+```ruby
+class MySweetLogger < Kiev::MultisourceLogger
+  def track_money(booking_params)
+    info(event: "money_income",
+         amount: booking_params[:price],
+         customer_id: booking_params[:user_id],
+         message: "Payment from user #{booking_params[:user_id]} arrived. Amount: #{booking_params[:price]}.")
+  end
+end
+```
+
+And then set it as a logger.
+
+```ruby
+  set :logger, MySweetLogger.new
+```
+
+In order to have request-only parameters working, you have to set up a request store, e.g.
+
+```ruby
+# config/initializers/kiev.rb
+Kiev.configure_request_store_middleware do |application|
+  application.use Pliny::Middleware::RequestStore, store: Pliny::RequestStore
+end
+
+Kiev.configure_request_store do
+  Pliny::RequestStore.store[:log_context] ||= {}
+end
+```
+
+If you don't do this, any your request-only parameters will be discarded and not logged.
 
 ## Contributing
 

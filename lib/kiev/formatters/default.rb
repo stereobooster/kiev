@@ -21,6 +21,8 @@ module Kiev
       private
 
       def format_hash(hash)
+        message = hash.symbolize_keys[:message]
+        return message if message
         hash.keys.sort.map { |key| "#{key}=#{hash[key]}" }.join(" ")
       end
 
