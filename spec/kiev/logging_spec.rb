@@ -130,9 +130,9 @@ describe Kiev::Logger do
           expect(logged_content.first).to include("[INFO] [#{ip_address}]")
         end
 
-        it "should return an instance of Logger" do
+        it "should return an instance of MultsourceLogger" do
           expect(settings).to respond_to(:logger)
-          expect(settings.logger).to be_a_kind_of(::Logger)
+          expect(settings.logger).to be_a_kind_of(Kiev::MultisourceLogger)
         end
 
         it "should NOT log lower logging levels" do

@@ -12,6 +12,12 @@ module Kiev
       def_delegator :request, :body, :raw_request_body
 
       def before
+        Kiev.request_store["ip"] = ip
+        Kiev.request_store["request_id"] = request_id
+        Kiev.request_store["verb"] = request.request_method
+        Kiev.request_store["path"] = request.path
+        Kiev.request_store["query"] = request.query_string if request.query_string.present?
+
         log_request
 
         env["request_duration"] = 0
@@ -22,19 +28,27 @@ module Kiev
 
         env["request_duration"] = Benchmark.realtime { original_response = super(env) }
 
-        logger.info ResponseInfoFormatter.create(response_parameters).to_s
+        logger.info ResponseInfoFormatter.create(response_parameters).to_h
 
         original_response
       end
 
       protected
 
+      def ip
+        env["HTTP_X_FORWARDED_FOR"] || env["HTTP_X_REAL_IP"] || env["REMOTE_ADDR"] || "-"
+      end
+
+      def request_id
+        env["REQUEST_ID"]
+      end
+
       def log_request
-        logger.info RequestInfoFormatter.create(request_parameters).to_s
+        logger.info RequestInfoFormatter.create(request_parameters).to_h
 
         return if request.get? || request.head?
 
-        logger.info RequestBodyFormatter.create(request_body_parameters).to_s
+        logger.info RequestBodyFormatter.create(request_body_parameters).to_h
       end
 
       def request_body
@@ -45,8 +59,8 @@ module Kiev
 
       def base_logging_info
         BaseRequestDataFormatter.create(
-          ip: env["HTTP_X_FORWARDED_FOR"] || env["HTTP_X_REAL_IP"] || env["REMOTE_ADDR"] || "-",
-          request_id: env["REQUEST_ID"]
+          ip: ip,
+          request_id: request_id
         )
       end
 
@@ -92,6 +106,20 @@ module Kiev
       RequestInfoFormatter = Struct.new(:base_request_data, :query, :path, :request_method) do
         extend StructFromHash
 
+        def to_h
+          hash = {
+            event: "request_started",
+            ip: base_request_data.ip,
+            request_id: base_request_data.request_id,
+            verb: request_method,
+            path: path,
+            message: to_s
+          }
+
+          hash.merge(query: query) if query.present?
+          hash
+        end
+
         def to_s
           query_info = query.present? ? "?#{query}" : ""
 
@@ -102,6 +130,16 @@ module Kiev
       RequestBodyFormatter = Struct.new(:base_request_data, :body) do
         extend StructFromHash
 
+        def to_h
+          {
+            event: "request_body",
+            ip: base_request_data.ip,
+            request_id: base_request_data.request_id,
+            data: body,
+            message: to_s
+          }
+        end
+
         def to_s
           "#{base_request_data} Request body: #{body}"
         end
@@ -109,6 +147,18 @@ module Kiev
 
       ResponseInfoFormatter = Struct.new(:base_request_data, :duration, :status, :body) do
         extend StructFromHash
+
+        def to_h
+          {
+            event: "request_finished",
+            ip: base_request_data.ip,
+            request_id: base_request_data.request_id,
+            request_duration: duration,
+            data: body,
+            status: status,
+            message: to_s
+          }
+        end
 
         def to_s
           "#{base_request_data} Responded with #{status} (#{duration}ms): #{body}"
