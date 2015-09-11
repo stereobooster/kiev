@@ -26,7 +26,7 @@ module Kiev
 
       def after
         response["X-REQUEST-ID"] = request_ids[0]
-        response
+        response.to_a
       end
 
       private
