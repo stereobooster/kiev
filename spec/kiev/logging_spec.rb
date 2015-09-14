@@ -26,12 +26,18 @@ describe Kiev::Logger do
 
           register Kiev::Logger
 
+          def message
+            params[:msg].try(:force_encoding,
+                             request.content_charset || Kiev::Middleware::RequestLogger::DEFAULT_CHARSET)
+            .try(:encode, Encoding.default_internal || Encoding.default_external)
+          end
+
           get "/logger/test" do
-            erb("Get Message: #{params[:msg]}", layout: false)
+            erb("Get Message: #{message}", layout: false)
           end
 
           post "/logger/test" do
-            erb("Post Message: #{params[:msg]}", layout: false)
+            erb("Post Message: #{message}", layout: false)
           end
 
           get "/logger/error" do
@@ -97,6 +103,49 @@ describe Kiev::Logger do
           expect(logged_content.last).to match(
             /\[INFO\] \[127\.0\.0\.1\] \[#{headers["X-Request-Id"]}\] Responded with 200 \(\d+\.\d+ms\): #{body}/
           )
+        end
+
+        context "when body charset is not provided" do
+          it "should treat POST body encoded with ISO-8859-1 and correctly log it" do
+            post("/logger/test",
+                 "msg=\xC3".force_encoding("ISO-8859-1"),
+                 "CONTENT_TYPE" => "application/x-www-form-urlencoded")
+
+            logged_content = log_file_content.strip.split("\n")
+
+            expect(body).to eq "Post Message: Ã"
+            expect(headers["X-Request-Id"]).to match(Kiev::Middleware::RequestId::UUID_PATTERN)
+            expect(logged_content.first).to include(
+              "[INFO] [127.0.0.1] [#{headers['X-Request-Id']}] Started: POST /logger/test"
+            )
+            expect(logged_content[1]).to include(
+              "[INFO] [127.0.0.1] [#{headers['X-Request-Id']}] Request body: msg=Ã"
+            )
+            expect(logged_content.last).to match(
+              /\[INFO\] \[127\.0\.0\.1\] \[#{headers["X-Request-Id"]}\] Responded with 200 \(\d+\.\d+ms\): #{body}/
+            )
+          end
+        end
+
+        context "when body charset is provided" do
+          it "should encode POST body with provided charset and correctly log it" do
+            post("/logger/test", "msg=\xC3".force_encoding("ISO-8859-1").encode("UTF-8"),
+                 "CONTENT_TYPE" => "application/x-www-form-urlencoded;charset=UTF-8")
+
+            logged_content = log_file_content.strip.split("\n")
+
+            expect(body).to eq "Post Message: Ã"
+            expect(headers["X-Request-Id"]).to match(Kiev::Middleware::RequestId::UUID_PATTERN)
+            expect(logged_content.first).to include(
+              "[INFO] [127.0.0.1] [#{headers['X-Request-Id']}] Started: POST /logger/test"
+            )
+            expect(logged_content[1]).to include(
+              "[INFO] [127.0.0.1] [#{headers['X-Request-Id']}] Request body: msg=Ã"
+            )
+            expect(logged_content.last).to match(
+              /\[INFO\] \[127\.0\.0\.1\] \[#{headers["X-Request-Id"]}\] Responded with 200 \(\d+\.\d+ms\): #{body}/
+            )
+          end
         end
 
         it "logs unhandled exceptions" do

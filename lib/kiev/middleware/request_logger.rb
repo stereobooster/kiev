@@ -9,6 +9,8 @@ module Kiev
     class RequestLogger < Base
       extend Forwardable
 
+      DEFAULT_CHARSET = "ISO-8859-1"
+
       def_delegator :request, :body, :raw_request_body
 
       def before
@@ -52,9 +54,11 @@ module Kiev
       end
 
       def request_body
+        charset = request.content_charset || DEFAULT_CHARSET
         raw_request_body.read.tap do
           raw_request_body.rewind
-        end
+        end.force_encoding(charset)
+        .encode(Encoding.default_internal || Encoding.default_external)
       end
 
       def base_logging_info
