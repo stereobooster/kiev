@@ -59,7 +59,7 @@ module Kiev
         charset = request.content_charset || DEFAULT_CHARSET
         request_body = raw_request_body.read
         raw_request_body.rewind
-        request_body.force_encoding(charset).encode(Encoding.default_internal || Encoding.default_external)
+        request_body.force_encoding(charset).encode(Kiev.config[:encoding])
       end
 
       def base_logging_info

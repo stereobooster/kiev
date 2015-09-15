@@ -29,7 +29,7 @@ describe Kiev::Logger do
           def message
             params[:msg]
               .try(:force_encoding, request.content_charset || Kiev::Middleware::RequestLogger::DEFAULT_CHARSET)
-              .try(:encode, Encoding.default_internal || Encoding.default_external)
+              .try(:encode, Kiev.config[:encoding])
           end
 
           get "/logger/test" do
