@@ -7,7 +7,8 @@ module Kiev
       @config = HashWithIndifferentAccess.new(
         application: "MyApp",
         log_type: "kiev-gem",
-        environment: ENV["RACK_ENV"] || "development"
+        environment: ENV["RACK_ENV"] || "development",
+        encoding: "UTF-8"
       )
     end
   end
