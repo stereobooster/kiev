@@ -1,3 +1,30 @@
 ---
+Attribute:
+  exclude:
+    - Kiev::Middleware::RequestId#request_ids
+FeatureEnvy:
+  exclude:
+    - Kiev::Settings#logger_log_file
+    - Kiev::MultisourceLogger#track_exception
+DuplicateMethodCall:
+  exclude:
+    - Kiev::Logger#configure_logging
 IrresponsibleModule:
+  enabled: false
+LongParameterList:
+  exclude:
+    - Kiev::Formatters::Default#call
+NestedIterators:
+  exclude:
+    - init_app
+    - Kiev::MultisourceLogger#method_missing
+TooManyInstanceVariables:
+  exclude:
+    - Kiev::Middleware::Base
+TooManyStatements:
+  max_statements: 10
+  exclude:
+    - init_app
+    - Kiev::Logger#configure_logging
+UtilityFunction:
   enabled: false

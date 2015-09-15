@@ -27,9 +27,9 @@ describe Kiev::Logger do
           register Kiev::Logger
 
           def message
-            params[:msg].try(:force_encoding,
-                             request.content_charset || Kiev::Middleware::RequestLogger::DEFAULT_CHARSET)
-            .try(:encode, Encoding.default_internal || Encoding.default_external)
+            params[:msg]
+              .try(:force_encoding, request.content_charset || Kiev::Middleware::RequestLogger::DEFAULT_CHARSET)
+              .try(:encode, Encoding.default_internal || Encoding.default_external)
           end
 
           get "/logger/test" do
@@ -107,9 +107,11 @@ describe Kiev::Logger do
 
         context "when body charset is not provided" do
           it "should treat POST body encoded with ISO-8859-1 and correctly log it" do
-            post("/logger/test",
-                 "msg=\xC3".force_encoding("ISO-8859-1"),
-                 "CONTENT_TYPE" => "application/x-www-form-urlencoded")
+            post(
+              "/logger/test",
+              "msg=\xC3".force_encoding("ISO-8859-1"),
+              "CONTENT_TYPE" => "application/x-www-form-urlencoded"
+            )
 
             logged_content = log_file_content.strip.split("\n")
 
@@ -129,8 +131,11 @@ describe Kiev::Logger do
 
         context "when body charset is provided" do
           it "should encode POST body with provided charset and correctly log it" do
-            post("/logger/test", "msg=\xC3".force_encoding("ISO-8859-1").encode("UTF-8"),
-                 "CONTENT_TYPE" => "application/x-www-form-urlencoded;charset=UTF-8")
+            post(
+              "/logger/test",
+              "msg=\xC3".force_encoding("ISO-8859-1").encode("UTF-8"),
+              "CONTENT_TYPE" => "application/x-www-form-urlencoded;charset=UTF-8"
+            )
 
             logged_content = log_file_content.strip.split("\n")
 
