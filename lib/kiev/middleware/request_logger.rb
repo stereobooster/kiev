@@ -14,11 +14,13 @@ module Kiev
       def_delegator :request, :body, :raw_request_body
 
       def before
-        Kiev.request_store["ip"] = ip
-        Kiev.request_store["request_id"] = request_id
-        Kiev.request_store["verb"] = request.request_method
-        Kiev.request_store["path"] = request.path
-        Kiev.request_store["query"] = request.query_string if request.query_string.present?
+        request_store = Kiev.request_store
+        request_store["ip"] = ip
+        request_store["request_id"] = request_id
+        request_store["verb"] = request.request_method
+        request_store["path"] = request.path
+        query_string = request.query_string
+        request_store["query"] = query_string if query_string.present?
 
         log_request
 
@@ -55,10 +57,9 @@ module Kiev
 
       def request_body
         charset = request.content_charset || DEFAULT_CHARSET
-        raw_request_body.read.tap do
-          raw_request_body.rewind
-        end.force_encoding(charset)
-        .encode(Encoding.default_internal || Encoding.default_external)
+        request_body = raw_request_body.read
+        raw_request_body.rewind
+        request_body.force_encoding(charset).encode(Encoding.default_internal || Encoding.default_external)
       end
 
       def base_logging_info
