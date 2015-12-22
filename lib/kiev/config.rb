@@ -8,7 +8,8 @@ module Kiev
         application: "MyApp",
         log_type: "kiev-gem",
         environment: ENV["RACK_ENV"] || "development",
-        encoding: "UTF-8"
+        encoding: "UTF-8",
+        filter_params: []
       )
     end
   end

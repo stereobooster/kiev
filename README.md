@@ -82,6 +82,15 @@ end
 
 If you don't do this, any your request-only parameters will be discarded and not logged.
 
+Kiev supports filtering of sensitive data. Currently it supports form-data and json requests.
+Note that all other requests e.g. xml will not be filtered.
+
+```ruby
+Kiev.configure do |config|
+  config["filter_params"] = ["credit_card_number", "credit_card_cvv"]
+end
+```
+
 ## Contributing
 
 Bug reports and pull requests are welcome on GitHub at https://github.com/[USERNAME]/kiev. This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [Contributor Covenant](contributor-covenant.org) code of conduct.
