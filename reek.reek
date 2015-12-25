@@ -9,6 +9,8 @@ FeatureEnvy:
 DuplicateMethodCall:
   exclude:
     - Kiev::Logger#configure_logging
+    - Kiev::RequestBodyEncoder#self.call
+    - Kiev::RequestFilters::BodyFilter#filter_body_params
 IrresponsibleModule:
   enabled: false
 LongParameterList:

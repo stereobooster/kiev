@@ -1,25 +1,19 @@
 require "benchmark"
-require "forwardable"
 require "logger"
 require "kiev/middleware/base"
 require "kiev/struct_from_hash"
+require "kiev/request_filters/query_params_filter"
+require "kiev/request_filters/body_filter"
 
 module Kiev
   module Middleware
     class RequestLogger < Base
-      extend Forwardable
-
-      DEFAULT_CHARSET = "ISO-8859-1"
-
-      def_delegator :request, :body, :raw_request_body
-
       def before
         request_store = Kiev.request_store
         request_store["ip"] = ip
         request_store["request_id"] = request_id
         request_store["verb"] = request.request_method
         request_store["path"] = request.path
-        query_string = request.query_string
         request_store["query"] = query_string if query_string.present?
 
         log_request
@@ -56,10 +50,11 @@ module Kiev
       end
 
       def request_body
-        charset = request.content_charset || DEFAULT_CHARSET
-        request_body = raw_request_body.read
-        raw_request_body.rewind
-        request_body.force_encoding(charset).encode(Kiev.config[:encoding])
+        RequestFilters::BodyFilter.call(request)
+      end
+
+      def query_string
+        @query_string ||= RequestFilters::QueryParamsFilter.call(request)
       end
 
       def base_logging_info
@@ -71,7 +66,7 @@ module Kiev
 
       def request_parameters
         {
-          query: request.query_string,
+          query: query_string,
           path: request.path,
           request_method: request.request_method,
           base_request_data: base_logging_info

@@ -28,7 +28,7 @@ describe Kiev::Logger do
 
           def message
             params[:msg]
-              .try(:force_encoding, request.content_charset || Kiev::Middleware::RequestLogger::DEFAULT_CHARSET)
+              .try(:force_encoding, request.content_charset || Kiev::RequestBodyEncoder::DEFAULT_CHARSET)
               .try(:encode, Kiev.config[:encoding])
           end
 
@@ -71,11 +71,10 @@ describe Kiev::Logger do
 
       describe "logging" do
         let(:ip_address) { "192.168.0.1" }
+        let(:logged_content) { log_file_content.strip.split("\n") }
 
         it "should log GET request/response info" do
           get("/logger/test?msg=this-works")
-
-          logged_content = log_file_content.strip.split("\n")
 
           expect(body).to eq "Get Message: this-works"
           expect(headers["X-Request-Id"]).to match(Kiev::Middleware::RequestId::UUID_PATTERN)
@@ -90,8 +89,6 @@ describe Kiev::Logger do
         it "should log POST request/response info" do
           post("/logger/test?hello=world", msg: "this-works")
 
-          logged_content = log_file_content.strip.split("\n")
-
           expect(body).to eq "Post Message: this-works"
           expect(headers["X-Request-Id"]).to match(Kiev::Middleware::RequestId::UUID_PATTERN)
           expect(logged_content.first).to include(
@@ -105,54 +102,6 @@ describe Kiev::Logger do
           )
         end
 
-        context "when body charset is not provided" do
-          it "should treat POST body encoded with ISO-8859-1 and correctly log it" do
-            post(
-              "/logger/test",
-              "msg=\xC3".force_encoding("ISO-8859-1"),
-              "CONTENT_TYPE" => "application/x-www-form-urlencoded"
-            )
-
-            logged_content = log_file_content.strip.split("\n")
-
-            expect(body).to eq "Post Message: Ã"
-            expect(headers["X-Request-Id"]).to match(Kiev::Middleware::RequestId::UUID_PATTERN)
-            expect(logged_content.first).to include(
-              "[INFO] [127.0.0.1] [#{headers['X-Request-Id']}] Started: POST /logger/test"
-            )
-            expect(logged_content[1]).to include(
-              "[INFO] [127.0.0.1] [#{headers['X-Request-Id']}] Request body: msg=Ã"
-            )
-            expect(logged_content.last).to match(
-              /\[INFO\] \[127\.0\.0\.1\] \[#{headers["X-Request-Id"]}\] Responded with 200 \(\d+\.\d+ms\): #{body}/
-            )
-          end
-        end
-
-        context "when body charset is provided" do
-          it "should encode POST body with provided charset and correctly log it" do
-            post(
-              "/logger/test",
-              "msg=\xC3".force_encoding("ISO-8859-1").encode("UTF-8"),
-              "CONTENT_TYPE" => "application/x-www-form-urlencoded;charset=UTF-8"
-            )
-
-            logged_content = log_file_content.strip.split("\n")
-
-            expect(body).to eq "Post Message: Ã"
-            expect(headers["X-Request-Id"]).to match(Kiev::Middleware::RequestId::UUID_PATTERN)
-            expect(logged_content.first).to include(
-              "[INFO] [127.0.0.1] [#{headers['X-Request-Id']}] Started: POST /logger/test"
-            )
-            expect(logged_content[1]).to include(
-              "[INFO] [127.0.0.1] [#{headers['X-Request-Id']}] Request body: msg=Ã"
-            )
-            expect(logged_content.last).to match(
-              /\[INFO\] \[127\.0\.0\.1\] \[#{headers["X-Request-Id"]}\] Responded with 200 \(\d+\.\d+ms\): #{body}/
-            )
-          end
-        end
-
         it "logs unhandled exceptions" do
           get("/logger/error")
 
@@ -163,23 +112,17 @@ describe Kiev::Logger do
         it "logs ip address from HTTP_X_FORWARDED_FOR header" do
           get("/logger/test", {}, "HTTP_X_FORWARDED_FOR" => ip_address)
 
-          logged_content = log_file_content.strip.split("\n")
-
           expect(logged_content.first).to include("[INFO] [#{ip_address}]")
         end
 
         it "logs ip address from HTTP_X_REAL_IP header" do
           get("/logger/test", {}, "HTTP_X_REAL_IP" => ip_address)
 
-          logged_content = log_file_content.strip.split("\n")
-
           expect(logged_content.first).to include("[INFO] [#{ip_address}]")
         end
 
         it "logs ip address from REMOTE_ADDR header" do
           get("/logger/test", {}, "REMOTE_ADDR" => ip_address)
-
-          logged_content = log_file_content.strip.split("\n")
 
           expect(logged_content.first).to include("[INFO] [#{ip_address}]")
         end
@@ -199,6 +142,72 @@ describe Kiev::Logger do
           settings.logger.error("error message")
 
           expect(log_file_content).to match(/\[ERROR\] error message/)
+        end
+
+        [
+          ["msg=\xC3", "application/x-www-form-urlencoded", "msg=Ã"],
+          ["msg=Ã", "application/x-www-form-urlencoded;charset=UTF-8", "msg=Ã"],
+          ["{\"msg\":\"\xC3\"}", "application/json", "{\"msg\":\"Ã\"}"],
+          ["{\"msg\":\"Ã\"}", "application/json;charset=UTF-8", "{\"msg\":\"Ã\"}"]
+        ].each do |request_body, content_type, logged_body|
+          context "with encoded body and '#{content_type}' content type" do
+            it "should treat encoding and correctly log request body" do
+              post("/logger/test", request_body.dup, "CONTENT_TYPE" => content_type)
+
+              expect(headers["X-Request-Id"]).to match(Kiev::Middleware::RequestId::UUID_PATTERN)
+              expect(logged_content.first).to include(
+                "[INFO] [127.0.0.1] [#{headers['X-Request-Id']}] Started: POST /logger/test"
+              )
+              expect(logged_content[1]).to include(
+                "[INFO] [127.0.0.1] [#{headers['X-Request-Id']}] Request body: #{logged_body}"
+              )
+            end
+          end
+        end
+
+        describe "sensitive data filtering" do
+          let(:cc_number) { "4111111111111111" }
+          let(:cc_cvv) { "1234" }
+
+          before do
+            Kiev.configure do |config|
+              config["filter_params"] = %w(credit_card_number credit_card_cvv)
+            end
+          end
+
+          it "should filter out sensitive data from GET requests" do
+            get("/logger/test?credit_card_number=#{cc_number}")
+
+            expect(logged_content.first).to include(
+              "[INFO] [127.0.0.1] [#{headers['X-Request-Id']}] Started: GET /logger/test?credit_card_number=FILTERED"
+            )
+          end
+
+          it "should filter out sensitive data from POST requests" do
+            post("/logger/test?credit_card_cvv=#{cc_cvv}", credit_card_number: cc_number)
+
+            expect(logged_content.first).to include(
+              "[INFO] [127.0.0.1] [#{headers['X-Request-Id']}] Started: POST /logger/test?credit_card_cvv=FILTERED"
+            )
+            expect(logged_content[1]).to include(
+              "[INFO] [127.0.0.1] [#{headers['X-Request-Id']}] Request body: credit_card_number=FILTERED"
+            )
+          end
+
+          it "should filter out sensitive data from JSON requests" do
+            post(
+              "/logger/test?credit_card_cvv=#{cc_cvv}",
+              { credit_card_number: cc_number }.to_json,
+              "CONTENT_TYPE" => "application/json"
+            )
+
+            expect(logged_content.first).to include(
+              "[INFO] [127.0.0.1] [#{headers['X-Request-Id']}] Started: POST /logger/test?credit_card_cvv=FILTERED"
+            )
+            expect(logged_content[1]).to include(
+              "[INFO] [127.0.0.1] [#{headers['X-Request-Id']}] Request body: {\"credit_card_number\":\"FILTERED\"}"
+            )
+          end
         end
       end
     end
