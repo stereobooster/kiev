@@ -20,7 +20,7 @@ module Kiev
 
     def route_stderr_to_log_storage(log_storage)
       return if settings.environment.to_s == "test"
-      log_storage = STDOUT if log_storage == :stdout
+      log_storage = STDOUT if log_storage.to_s == "stdout"
       STDERR.reopen(log_storage)
       STDERR.sync = true
     end
@@ -96,7 +96,7 @@ module Kiev
     def logger_log_file
       file = log_file
 
-      if file == :stdout
+      if file.to_s == "stdout"
         "stdout:/"
       elsif file.match(/^file:/)
         file
