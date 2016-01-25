@@ -16,7 +16,7 @@ module Kiev
         request_store["path"] = request.path
         request_store["query"] = query_string if query_string.present?
 
-        log_request
+        log_request unless disable_request_logging?
 
         env["request_duration"] = 0
       end
@@ -26,7 +26,7 @@ module Kiev
 
         env["request_duration"] = Benchmark.realtime { original_response = super(env) }
 
-        logger.info ResponseInfoFormatter.create(response_parameters).to_h
+        log_response unless disable_request_logging?
 
         original_response
       end
@@ -47,6 +47,10 @@ module Kiev
         return if request.get? || request.head?
 
         logger.info RequestBodyFormatter.create(request_body_parameters).to_h
+      end
+
+      def log_response
+        logger.info ResponseInfoFormatter.create(response_parameters).to_h
       end
 
       def request_body
@@ -84,15 +88,27 @@ module Kiev
         {
           duration: (env["request_duration"] * 1000).round(2),
           status: response.status,
-          body: response.body.join,
+          body: filtered_body,
           base_request_data: base_logging_info
         }
+      end
+
+      def filtered_body
+        disable_response_body_logging? ? "EXCLUDED" : response.body.join
       end
 
       private
 
       def logger
         @logger ||= @options[:logger] || Logger.new(STDOUT)
+      end
+
+      def disable_request_logging?
+        @disable_request_logging ||= Kiev.config.disable_request_logging?(request)
+      end
+
+      def disable_response_body_logging?
+        Kiev.config.disable_response_body_logging?(response)
       end
 
       BaseRequestDataFormatter = Struct.new(:ip, :request_id) do

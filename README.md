@@ -91,6 +91,31 @@ Kiev.configure do |config|
 end
 ```
 
+#### Skipping request/response logging
+
+You can control request/response logging using **disable_request_logging** or **disable_response_body_logging** config parameter.
+They both take FalseClass, TrueClass or Proc object that should evaluate to boolean result. 
+
+Example:
+
+```ruby
+Kiev.configure do |config|
+  config["disable_request_logging"] = -> (request) { request.path.match(/test/) }
+end
+```
+
+In this case all requests(and responses) to endpoints which have **test** in their path will not be logged. 
+
+Another example:
+
+```ruby
+Kiev.configure do |config|
+  config["disable_response_body_logging"] = -> (response) { response.status == 200 }
+end
+```
+
+In this case for all successful responses only general response info will be logged but NOT the body.
+
 ## Contributing
 
 Bug reports and pull requests are welcome on GitHub at https://github.com/[USERNAME]/kiev. This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [Contributor Covenant](contributor-covenant.org) code of conduct.

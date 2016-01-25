@@ -36,4 +36,5 @@ Gem::Specification.new do |spec|
   spec.add_dependency "sinatra-contrib"
   spec.add_dependency "activesupport"
   spec.add_dependency "logstash-logger"
+  spec.add_dependency "classy_hash", "~> 0.1.5"
 end
