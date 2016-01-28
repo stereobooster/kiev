@@ -43,6 +43,10 @@ describe Kiev::Logger do
           get "/logger/error" do
             fail ArgumentError
           end
+
+          get "/ping" do
+            erb("Get Message: #{message}", layout: false)
+          end
         end
       end
 
@@ -144,6 +148,11 @@ describe Kiev::Logger do
           expect(log_file_content).to match(/\[ERROR\] error message/)
         end
 
+        it "should not log GET '/ping' request/response info" do
+          get("/ping")
+          expect(logged_content).to be_empty
+        end
+
         [
           ["msg=\xC3", "application/x-www-form-urlencoded", "msg=Ã"],
           ["msg=Ã", "application/x-www-form-urlencoded;charset=UTF-8", "msg=Ã"],
@@ -213,7 +222,7 @@ describe Kiev::Logger do
         describe "disabling of logging by provided condition" do
           after do
             Kiev.configure do |config|
-              config["disable_request_logging"] = -> (_request) { false }
+              config["disable_request_logging"] = -> (request) { request.path.match(%r{^\/ping}) }
               config["disable_response_body_logging"] = -> (_response) { false }
             end
           end
