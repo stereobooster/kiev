@@ -6,6 +6,7 @@ FeatureEnvy:
   exclude:
     - Kiev::Settings#logger_log_file
     - Kiev::MultisourceLogger#track_exception
+    - Kiev::Config#call_proc
 DuplicateMethodCall:
   exclude:
     - Kiev::Logger#configure_logging
@@ -30,3 +31,6 @@ TooManyStatements:
     - Kiev::Logger#configure_logging
 UtilityFunction:
   enabled: false
+TooManyMethods:
+  exclude:
+    - Kiev::Middleware::RequestLogger

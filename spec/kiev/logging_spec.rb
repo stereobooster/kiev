@@ -209,6 +209,84 @@ describe Kiev::Logger do
             )
           end
         end
+
+        describe "disabling of logging by provided condition" do
+          after do
+            Kiev.configure do |config|
+              config["disable_request_logging"] = -> (_request) { false }
+              config["disable_response_body_logging"] = -> (_response) { false }
+            end
+          end
+
+          context "when both request and response logging are disabled" do
+            before do
+              Kiev.configure do |config|
+                config["disable_request_logging"] = -> (request) { request.path.match(/test/) }
+              end
+            end
+
+            context "GET requests" do
+              it "should not log request/response info" do
+                get("/logger/test?msg=this-works")
+                expect(logged_content).to be_empty
+              end
+            end
+
+            context "POST requests" do
+              it "should not log request/response info" do
+                post("/logger/test?hello=world", msg: "this-works")
+                expect(logged_content).to be_empty
+              end
+            end
+          end
+
+          context "when only response logging is disabled" do
+            before do
+              Kiev.configure do |config|
+                config["disable_response_body_logging"] = -> (response) { response.status == 200 }
+              end
+            end
+
+            context "GET requests" do
+              before do
+                get("/logger/test?msg=this-works")
+              end
+
+              it "should log request info" do
+                expect(logged_content.first).to include(
+                  "[INFO] [127.0.0.1] [#{headers['X-Request-Id']}] Started: GET /logger/test?msg=this-works"
+                )
+              end
+
+              it "should not log response body" do
+                expect(logged_content.last).to match(
+                  /\[INFO\] \[127\.0\.0\.1\] \[#{headers['X-Request-Id']}\] Responded with 200 \(\d+\.\d+ms\): EXCLUDED/
+                )
+              end
+            end
+
+            context "POST requests" do
+              before do
+                post("/logger/test?hello=world", msg: "this-works")
+              end
+
+              it "should log request info" do
+                expect(logged_content.first).to include(
+                  "[INFO] [127.0.0.1] [#{headers['X-Request-Id']}] Started: POST /logger/test?hello=world"
+                )
+                expect(logged_content[1]).to include(
+                  "[INFO] [127.0.0.1] [#{headers['X-Request-Id']}] Request body: msg=this-works"
+                )
+              end
+
+              it "should not log response body" do
+                expect(logged_content.last).to match(
+                  /\[INFO\] \[127\.0\.0\.1\] \[#{headers["X-Request-Id"]}\] Responded with 200 \(\d+\.\d+ms\): EXCLUDED/
+                )
+              end
+            end
+          end
+        end
       end
     end
 
