@@ -45,7 +45,7 @@ module Kiev
         environment: ENV["RACK_ENV"] || "development",
         encoding: "UTF-8",
         filter_params: [],
-        disable_request_logging: -> (_request) { false },
+        disable_request_logging: -> (request) { request.path.match(%r{^\/ping}) },
         disable_response_body_logging: -> (_response) { false }
       )
     end
