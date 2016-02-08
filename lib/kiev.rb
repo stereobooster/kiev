@@ -1,5 +1,6 @@
 require "active_support/all"
 require "logstash-logger"
+require "pheme"
 require "kiev/version"
 require "kiev/config"
 require "kiev/logger"

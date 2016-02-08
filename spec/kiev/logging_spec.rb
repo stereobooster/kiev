@@ -73,6 +73,68 @@ describe Kiev::Logger do
         end
       end
 
+      describe "Data storing" do
+        let(:ip_address) { "127.0.0.1" }
+        let(:request_headers) { {} }
+
+        before do
+          Kiev.configure do |config|
+            config[:application] = "TestApp"
+          end
+
+          Kiev.configure_request_store do
+            Thread.current[:kiev] ||= {}
+          end
+
+          Pheme.configure_request_store do
+            Thread.current[:pheme] ||= {}
+          end
+
+          get("/logger/test?msg=this-works", nil, request_headers)
+        end
+
+        after do
+          Pheme.request_store.clear
+          Kiev.request_store.clear
+        end
+
+        it "sets ip to caller ip" do
+          expect(Kiev.request_store[:ip]).to eq(ip_address)
+        end
+
+        it "sets request_id to request id" do
+          expect(Kiev.request_store[:request_id]).to eq(last_request.env["REQUEST_ID"])
+        end
+
+        it "sets verb to request method" do
+          expect(Kiev.request_store[:verb]).to eq(last_request.request_method)
+        end
+
+        it "sets path to request path" do
+          expect(Kiev.request_store[:path]).to eq(last_request.path)
+        end
+
+        it "sets query to request query" do
+          expect(Kiev.request_store[:query]).to eq(last_request.query_string)
+        end
+
+        it "sets uniform_request_id to correlation id" do
+          expect(Kiev.request_store[:uniform_request_id]).to eq(Pheme.uniform_request_id)
+        end
+
+        it "sets initial_app to initial app" do
+          expect(Kiev.request_store[:initial_app]).to eq(Pheme.initial_app)
+        end
+
+        context "when request has X-Blacklane-Request-App header" do
+          let(:request_headers) { { "HTTP_X_BLACKLANE_REQUEST_APP" => "SomeApp" } }
+
+          it "sets caller_app to caller app" do
+            expect(Kiev.request_store[:caller_app]).to eq(last_request.env["HTTP_X_BLACKLANE_REQUEST_APP"])
+          end
+        end
+      end
+
       describe "logging" do
         let(:ip_address) { "192.168.0.1" }
         let(:logged_content) { log_file_content.strip.split("\n") }

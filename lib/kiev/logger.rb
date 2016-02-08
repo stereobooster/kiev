@@ -1,8 +1,8 @@
 require "sinatra/extension"
 require "kiev/ext/rack/common_logger"
 require "kiev/formatters/default"
-require "kiev/middleware/request_logger"
 require "kiev/middleware/request_id"
+require "kiev/middleware/request_logger"
 require "kiev/multisource_logger"
 
 module Kiev
@@ -65,6 +65,7 @@ module Kiev
 
       use Middleware::RequestId
       Kiev.use_request_store_middleware(self)
+      use Pheme::Middleware::CorrelationIds, application: Kiev.config[:application]
 
       configure_logging if settings.logging
     end

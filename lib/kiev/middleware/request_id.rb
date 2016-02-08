@@ -1,3 +1,4 @@
+require "kiev/middleware/base"
 # please add changes here to core's Instruments as well
 
 module Kiev
