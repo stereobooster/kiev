@@ -9,16 +9,23 @@ module Kiev
   module Middleware
     class RequestLogger < Base
       def before
-        request_store = Kiev.request_store
-        request_store["ip"] = ip
-        request_store["request_id"] = request_id
-        request_store["verb"] = request.request_method
-        request_store["path"] = request.path
-        request_store["query"] = query_string if query_string.present?
+        prepare_data
 
         log_request unless disable_request_logging?
 
         env["request_duration"] = 0
+      end
+
+      def prepare_data
+        request_store = Kiev.request_store
+        request_store[:ip] = ip
+        request_store[:request_id] = request_id
+        request_store[:verb] = request.request_method
+        request_store[:path] = request.path
+        request_store[:query] = query_string if query_string.present?
+        request_store[:uniform_request_id] = uniform_request_id if uniform_request_id
+        request_store[:initial_app] = initial_app if initial_app
+        request_store[:caller_app] = caller_app if caller_app
       end
 
       def call(env)
@@ -41,10 +48,22 @@ module Kiev
         env["REQUEST_ID"]
       end
 
+      def uniform_request_id
+        Pheme.uniform_request_id
+      end
+
+      def initial_app
+        Pheme.initial_app
+      end
+
+      def caller_app
+        env[Pheme::APP_PARAM]
+      end
+
       def log_request
         logger.info RequestInfoFormatter.create(request_parameters).to_h
 
-        return if request.get? || request.head?
+        return if request.get? || request.head? || request.delete?
 
         logger.info RequestBodyFormatter.create(request_body_parameters).to_h
       end
