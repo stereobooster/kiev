@@ -34,3 +34,6 @@ UtilityFunction:
 TooManyMethods:
   exclude:
     - Kiev::Middleware::RequestLogger
+ControlParameter:
+  exclude:
+    - Kiev::RequestFilters::Body#self.for_content_type

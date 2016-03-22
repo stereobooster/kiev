@@ -2,8 +2,7 @@ require "benchmark"
 require "logger"
 require "kiev/middleware/base"
 require "kiev/struct_from_hash"
-require "kiev/request_filters/query_params_filter"
-require "kiev/request_filters/body_filter"
+require "kiev/filtered_request_params"
 
 module Kiev
   module Middleware
@@ -72,12 +71,12 @@ module Kiev
         logger.info ResponseInfoFormatter.create(response_parameters).to_h
       end
 
-      def request_body
-        RequestFilters::BodyFilter.call(request)
+      def query_string
+        filtered_request_params.query
       end
 
-      def query_string
-        @query_string ||= RequestFilters::QueryParamsFilter.call(request)
+      def filtered_request_params
+        @filtered_request_params ||= FilteredRequestParams.new(request)
       end
 
       def base_logging_info
@@ -98,7 +97,7 @@ module Kiev
 
       def request_body_parameters
         {
-          body: request_body,
+          body: filtered_request_params.body,
           base_request_data: base_logging_info
         }
       end
