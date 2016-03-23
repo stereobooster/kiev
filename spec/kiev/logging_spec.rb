@@ -242,7 +242,7 @@ describe Kiev::Logger do
 
           before do
             Kiev.configure do |config|
-              config["filter_params"] = %w(credit_card_number credit_card_cvv)
+              config["filter_params"] = %w(credit_card_number credit_card_cvv CardNumber)
             end
           end
 
@@ -277,6 +277,20 @@ describe Kiev::Logger do
             )
             expect(logged_content[1]).to include(
               "[INFO] [127.0.0.1] [#{headers['X-Request-Id']}] Request body: {\"credit_card_number\":\"FILTERED\"}"
+            )
+          end
+
+          it "should filter out sensitive data from XML requests" do
+            xml_payload = "<BookingRequest><CardNumber>4111111111111111</CardNumber></BookingRequest>"
+
+            post("/logger/test", xml_payload, "CONTENT_TYPE" => "text/xml")
+
+            expect(logged_content.first).to include(
+              "[INFO] [127.0.0.1] [#{headers['X-Request-Id']}] Started: POST /logger/test"
+            )
+            expect(logged_content[1]).to include(
+              "[INFO] [127.0.0.1] [#{headers['X-Request-Id']}] "\
+              "Request body: <BookingRequest><CardNumber>FILTERED</CardNumber></BookingRequest>"
             )
           end
         end
