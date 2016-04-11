@@ -31,6 +31,7 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "rake", "~> 10.0"
   spec.add_development_dependency "reek", "~> 3.7.1"
   spec.add_development_dependency "rspec"
+  spec.add_development_dependency "parser", "~> 2.2.3.0"
   spec.add_development_dependency "rubocop", "~> 0.35.1"
 
   spec.add_dependency "sinatra-contrib"

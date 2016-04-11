@@ -28,6 +28,7 @@ module Kiev
       end
 
       def call(env)
+        @filtered_request_params = nil
         original_response = nil
 
         env["request_duration"] = Benchmark.realtime { original_response = super(env) }
