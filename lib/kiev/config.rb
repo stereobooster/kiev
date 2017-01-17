@@ -10,8 +10,8 @@ module Kiev
       environment: String,
       encoding: String,
       filter_params: Array,
-      disable_request_logging: [FalseClass, TrueClass, Proc],
-      disable_response_body_logging: [FalseClass, TrueClass, Proc]
+      disable_request_logging: [TrueClass, Proc],
+      disable_response_body_logging: [TrueClass, Proc]
     }
 
     def initialize

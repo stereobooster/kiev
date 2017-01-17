@@ -9,8 +9,8 @@ describe Kiev::Logger do
     [:log_type, -> {}, "a/an String"],
     [:environment, -> {}, "a/an String"],
     [:encoding, -> {}, "a/an String"],
-    [:disable_request_logging, :wrong_value, "one of FalseClass, TrueClass, Proc"],
-    [:disable_response_body_logging, :wrong_value, "one of FalseClass, TrueClass, Proc"]
+    [:disable_request_logging, :wrong_value, "one of true or false, Proc"],
+    [:disable_response_body_logging, :wrong_value, "one of true or false, Proc"]
   ].each do |param, incorrect_value, error_message|
     context "when trying to configure #{param} with incorrect value" do
       let!(:initial_value) { Kiev.config[param] }
